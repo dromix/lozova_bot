@@ -21,7 +21,7 @@ class Bot {
 
     setInterval(async () => {
       this.admins = await this.getGroupAdmins();
-    }, 1000);
+    }, 10000);
   }
 
   // Handlers
