@@ -13,12 +13,15 @@ class Bot {
   async init() {
     logger.info("Start initialization bot");
 
-    this.admins = await this.getGroupAdmins();
     this.bot.onText(/\/start/, this.onStart.bind(this));
     this.bot.on("message", this.onMessage.bind(this));
     this.bot.on("error", this.onError.bind(this));
     this.bot.on("polling_error", this.onPullingError.bind(this));
     console.log("admins", this.admins);
+
+    setInterval(async () => {
+      this.admins = await this.getGroupAdmins();
+    }, 1000);
   }
 
   // Handlers
@@ -43,14 +46,31 @@ class Bot {
     this.bot.sendMessage(userId, welcomeMessage);
   }
 
+  onPromoteAdmin(msg) {
+    logger.info(msg);
+  }
+
   onMessage(msg) {
     logger.info(msg);
 
-    if (this.isReplyMessage(msg)) {
+    if (this.isReplyMessageFromAdmin(msg)) {
       return this.onReplyMessage(msg);
     }
 
-    const messageTemplate = `<a href="tg://user?id=${msg.from.id}">${msg.from.first_name} ${msg.from.last_name} | id:${msg.from.id}</a> \n${msg.text}`;
+    if (this.isAddChatMember(msg)) {
+      logger.info(`Add new member ${msg.new_chat_member.id}`);
+      return;
+    }
+
+    if (this.isRemoveChatMember(msg)) {
+      logger.info(`Remove a user ${msg.left_chat_participant.id}`);
+
+      return;
+    }
+
+    const messageTemplate = `<a href="tg://user?id=${msg.from.id}">${
+      msg.from.first_name || ""
+    } ${msg.from.last_name || ""} | id:${msg.from.id}</a> \n${msg.text || ""}`;
 
     this.bot.sendMessage(this.groupId, messageTemplate, {
       parse_mode: "HTML",
@@ -61,33 +81,44 @@ class Bot {
     const userId = msg.reply_to_message.text
       .match(/id:\d+/gim)[0]
       .split(":")[1];
-    //[0].spit(":")[1];
 
     logger.info(`onReply to user ${userId} with message ${msg.text}`, userId);
 
-    this.bot.sendMessage(userId, msg.text);
-  }
-
-  // Validators
-
-  isReplyMessage(msg) {
-    const isReplyFromNotificationGroup = msg.chat.id === this.groupId;
-    logger.info(`this.groupId ${this.groupId} chat.id ${msg.chat.id}`);
-    const isReply = msg.reply_to_message !== undefined;
     const isReplyFromAdmin = this.admins.some(
       (admin) => admin.id === msg.from.id
     );
 
+    if (isReplyFromAdmin) {
+      this.bot.sendMessage(userId, msg.text);
+    }
+  }
+
+  // Validators
+
+  isReplyMessageFromAdmin(msg) {
+    const isReplyFromNotificationGroup = msg.chat.id === this.groupId;
+    logger.info(`this.groupId ${this.groupId} chat.id ${msg.chat.id}`);
+    const isReply = msg.reply_to_message !== undefined;
     logger.info(`isReplyFromNotificationGroup`, isReplyFromNotificationGroup);
     logger.info(`isReply`, isReply);
 
-    return isReply && isReplyFromNotificationGroup && isReplyFromAdmin;
+    return isReply && isReplyFromNotificationGroup;
   }
 
-  isNewChatMember(msg) {
+  isAddChatMember(msg) {
     const isNewMember =
       msg.new_chat_member !== undefined ||
       msg.new_chat_participant !== undefined;
+
+    return isNewMember;
+  }
+
+  isRemoveChatMember(msg) {
+    const isRemoveMember =
+      msg.left_chat_member !== undefined ||
+      msg.left_chat_participant !== undefined;
+
+    return isRemoveMember;
   }
 
   // Helpers
