@@ -17,7 +17,6 @@ class Bot {
     this.bot.on("message", this.onMessage.bind(this));
     this.bot.on("error", this.onError.bind(this));
     this.bot.on("polling_error", this.onPullingError.bind(this));
-    console.log("admins", this.admins);
 
     setInterval(async () => {
       this.admins = await this.getGroupAdmins();
@@ -34,7 +33,6 @@ class Bot {
   }
 
   onStart(msg) {
-    logger.info("onstartmsg", msg);
     const userId = msg.from.id;
     const welcomeMessage = `Привет 🚀
 Я админ паблика @xlozovaya
@@ -51,8 +49,6 @@ class Bot {
   }
 
   onMessage(msg) {
-    logger.info(msg);
-
     if (this.isReplyMessageFromAdmin(msg)) {
       return this.onReplyMessage(msg);
     }
@@ -72,6 +68,12 @@ class Bot {
       msg.from.first_name || ""
     } ${msg.from.last_name || ""} | id:${msg.from.id}</a> \n${msg.text || ""}`;
 
+    logger.info(
+      `Received from ${msg.from.first_name || ""} ${
+        msg.from.last_name || ""
+      } | id:${msg.from.id} \n Message: ${msg.text}`
+    );
+
     this.bot.sendMessage(this.groupId, messageTemplate, {
       parse_mode: "HTML",
     });
@@ -82,7 +84,7 @@ class Bot {
       .match(/id:\d+/gim)[0]
       .split(":")[1];
 
-    logger.info(`onReply to user ${userId} with message ${msg.text}`, userId);
+    logger.info(`Reply to user ${userId} with message ${msg.text}`);
 
     const isReplyFromAdmin = this.admins.some(
       (admin) => admin.id === msg.from.id
@@ -97,10 +99,7 @@ class Bot {
 
   isReplyMessageFromAdmin(msg) {
     const isReplyFromNotificationGroup = msg.chat.id === this.groupId;
-    logger.info(`this.groupId ${this.groupId} chat.id ${msg.chat.id}`);
     const isReply = msg.reply_to_message !== undefined;
-    logger.info(`isReplyFromNotificationGroup`, isReplyFromNotificationGroup);
-    logger.info(`isReply`, isReply);
 
     return isReply && isReplyFromNotificationGroup;
   }
