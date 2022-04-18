@@ -1,5 +1,6 @@
 const { Bot } = require("./src/app/bot");
 const http = require("http");
+const express = require("express");
 const config = require("./src/config");
 const logger = require("./src/helpers/logger");
 
@@ -8,12 +9,13 @@ const logger = require("./src/helpers/logger");
  */
 
 const port = normalizePort(config.server.port);
+const app = express();
 
 /**
  * Create HTTP server.
  */
 
-const server = http.createServer();
+const server = http.createServer(app);
 
 ///
 server.listen(port);
@@ -69,6 +71,10 @@ function onError(error) {
 /**
  * Event listener for HTTP server "listening" event.
  */
+
+app.get("/", (req, res) => {
+  res.send("alive");
+});
 
 async function onListening() {
   const addr = server.address();
